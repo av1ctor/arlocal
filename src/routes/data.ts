@@ -117,8 +117,8 @@ export async function dataRoute(ctx: Router.RouterContext) {
 
   data = await dataDB.findOne(transaction);
 
-  ctx.logging.log(metadata);
-  ctx.logging.log(data);
+  //ctx.logging.log(metadata);
+  //ctx.logging.log(data);
 
   let body;
 
