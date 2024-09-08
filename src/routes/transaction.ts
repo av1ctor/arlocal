@@ -1,3 +1,4 @@
+import Arweave from 'arweave';
 import Router from 'koa-router';
 import mime from 'mime';
 import { formatTransaction, TransactionDB } from '../db/transaction';
@@ -58,7 +59,7 @@ export async function txRoute(ctx: Router.RouterContext) {
     const transaction = path.length > 1 ? path[1] : '';
 
     const metadata = await transactionDB.getById(transaction);
-    ctx.logging.log(metadata);
+    //ctx.logging.log(metadata);
 
     if (!metadata) {
       ctx.status = 404;
@@ -95,7 +96,7 @@ export async function txOffsetRoute(ctx: Router.RouterContext) {
     const transaction = path.length > 1 ? path[1] : '';
 
     const metadata: Transaction = await transactionDB.getById(transaction);
-    ctx.logging.log(metadata);
+    //ctx.logging.log(metadata);
 
     if (!metadata) {
       ctx.status = 404;
@@ -128,13 +129,18 @@ export async function txPostRoute(ctx: Router.RouterContext) {
     const wallet = await walletDB.getWallet(owner);
     const calculatedReward = Math.round((+(data.data_size || '0') / 1000) * 65595508);
 
-    if (!wallet || wallet.balance < calculatedReward) {
+    if (!wallet) {
+      ctx.status = 404;
+      ctx.body = { status: 404, msg: `Wallet not found` };
+      return ctx;
+    }
+    if (wallet.balance < calculatedReward) {
       ctx.status = 410;
-      ctx.body = { code: 410, msg: "You don't have enough tokens" };
-      return;
+      ctx.body = { status: 410, msg: "You don't have enough tokens" };
+      return ctx;
     }
 
-    ctx.logging.log('post', data);
+    //ctx.logging.log('post', data);
 
     let bundleFormat = '';
     let bundleVersion = '';
@@ -156,7 +162,7 @@ export async function txPostRoute(ctx: Router.RouterContext) {
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
 
-          await txPostRoute({
+          const res = await txPostRoute({
             ...ctx,
             connection: ctx.connection,
             dbPath: ctx.dbPath,
@@ -172,12 +178,23 @@ export async function txPostRoute(ctx: Router.RouterContext) {
             },
             txInBundle: true,
           });
+
+          if(res.status >= 400) {
+            return {status: res.status, body: res.body};
+          }
         }
+
+        return {status: 200, body: ''};
       };
 
       if (data.data) {
         const buffer = Buffer.from(data.data, 'base64');
-        await createTxsFromItems(buffer);
+        const res = await createTxsFromItems(buffer);
+        if(res.status >= 400) {
+          ctx.status = res.status;
+          ctx.body = res.body;
+          return;
+        }
       } else {
         (async () => {
           let lastOffset = 0;
@@ -193,7 +210,12 @@ export async function txPostRoute(ctx: Router.RouterContext) {
           const chunk = chunks.map((ch) => Buffer.from(b64UrlToBuffer(ch.chunk)));
 
           const buffer = Buffer.concat(chunk);
-          await createTxsFromItems(buffer);
+          const res = await createTxsFromItems(buffer);
+          if(res.status >= 400) {
+            ctx.status = res.status;
+            ctx.body = res.body;
+            return;
+          }
         })();
       }
     }
@@ -267,7 +289,7 @@ export async function txPostRoute(ctx: Router.RouterContext) {
       const name = Utils.atob(tag.name);
       const value = Utils.atob(tag.value);
 
-      ctx.logging.log(name, value);
+      //ctx.logging.log(name, value);
 
       await ctx.connection
         .insert({
@@ -288,8 +310,12 @@ export async function txPostRoute(ctx: Router.RouterContext) {
       await walletDB.decrementBalance(owner, +fee);
     }
     ctx.body = data;
+    return ctx;
   } catch (error) {
     console.error({ error });
+    ctx.status = 500;
+    ctx.body = { status: 500, msg: String(error) };
+    return ctx;
   }
 }
 
@@ -438,20 +464,32 @@ export async function txRawDataRoute(ctx: Router.RouterContext) {
     }
 
     // Check for the data_size
-    const size = parseInt(metadata.data_size, 10);
-
-    if (size > 12000000) {
+    if (BigInt(metadata.data_size) > 10_000_000) {
       ctx.status = 400;
-      ctx.body = 'tx_data_too_big';
+      ctx.body = { problem: 'data is too big', solution: 'use the `/chunk/:offset` routing to download bigger chunks' };
       return;
     }
 
     // Find the transaction data
-    const data = await dataDB.findOne(txid);
+    const {data} = await dataDB.findOne(txid);
 
-    // Return the base64 data to the user
+    let buffer: Buffer;
+    if (data.length === 0) {
+      // then we need fetch the chunks
+      const chunks = await chunkDB.getRoot(metadata.data_root);
+      chunks.sort((a: Chunk, b: Chunk) => a.offset - b.offset);
+      buffer = Buffer.concat(
+        chunks.map(({ chunk: chunkData }) => {
+          return Buffer.from(Arweave.utils.b64UrlToBuffer(chunkData));
+        })
+      )
+    } else {
+      buffer = Buffer.from(Arweave.utils.b64UrlToBuffer(data));
+    }
+
     ctx.status = 200;
-    ctx.body = data.data;
+    ctx.type = Utils.tagValue(metadata.tags, 'Content-Type') || 'application/octet-stream'
+    ctx.body = buffer;
   } catch (error) {
     ctx.status = 500;
     ctx.body = { error: error.message };

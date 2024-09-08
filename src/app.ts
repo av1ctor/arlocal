@@ -147,6 +147,7 @@ export default class ArLocal {
     this.router.get('/tx/:txid/:field', txFieldRoute);
     this.router.get('/tx/:txid/:file', txFileRoute);
     this.router.get('/tx/:txid', txRoute);
+    this.router.get('/raw/:txid', txRawDataRoute);
     this.router.delete('/tx/:txid', deleteTxRoute);
     this.router.post('/tx', txValidateMiddleware, txPostRoute);
 

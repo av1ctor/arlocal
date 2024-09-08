@@ -41,7 +41,7 @@ export async function txAccessMiddleware(ctx: Router.RouterContext, next: Next) 
     const txid = path.length > 1 ? path[1] : '';
 
     const metadata: TransactionType = await transactionDB.getById(txid);
-    ctx.logging.log(metadata);
+    //ctx.logging.log(metadata);
 
     if (!metadata) {
       ctx.status = 404;
@@ -50,11 +50,11 @@ export async function txAccessMiddleware(ctx: Router.RouterContext, next: Next) 
     }
 
     // restrict tx in a bundle
-    if ((metadata.bundledIn || '').length) {
+    /*if ((metadata.bundledIn || '').length) {
       ctx.status = 404;
       ctx.body = 'Not Found';
       return;
-    }
+    }*/
 
     await next();
   } catch (error) {
