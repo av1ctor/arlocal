@@ -17,7 +17,7 @@ import { TransactionDB } from '../db/transaction';
 import { computeRootHash } from '../utils/merkle';
 import { concatBuffers } from '../utils/utils';
 import { verifySignature } from '../utils/key';
-import { mineRoute } from 'routes/mine';
+import { mineRoute } from '../routes/mine';
 
 const pathRegex = /^\/?([a-z0-9-_]{43})/i;
 const txIDRegex = /[a-z0-9-_]{43}/i;
