@@ -61,7 +61,7 @@ export async function txAccessMiddleware(ctx: Router.RouterContext, next: Next) 
 
     if(ctx.status === 200) {
       if(ctx.automine) {
-        mineRoute(Object.assign({}, ctx));
+        await mineRoute(Object.assign({}, ctx));
       }
     }
   } catch (error) {
