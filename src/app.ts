@@ -54,6 +54,7 @@ declare module 'koa' {
     dbPath: string;
     logging: Logging;
     fails: number;
+    automine: boolean;
     timestamp: number;
     txInBundle?: boolean;
   }
@@ -64,6 +65,7 @@ export default class ArLocal {
   private dbPath: string;
   private persist: boolean;
   private fails: number;
+  private automine: boolean;
   private log: Logging;
 
   private connection: Knex;
@@ -74,7 +76,7 @@ export default class ArLocal {
   private router = new Router();
   private walletDB: WalletDB;
 
-  constructor(port: number = 1984, showLogs: boolean = true, dbPath?: string, persist = false, fails = 0) {
+  constructor(port: number = 1984, showLogs: boolean = true, dbPath?: string, persist = false, fails = 0, automine: boolean = false) {
     this.port = port || this.port;
     dbPath = dbPath || path.join(__dirname, '.db', port.toString());
 
@@ -82,6 +84,7 @@ export default class ArLocal {
 
     this.persist = persist;
     this.fails = fails;
+    this.automine = automine;
     this.log = new Logging(showLogs, this.persist);
 
     this.connection = connect(dbPath);
@@ -102,6 +105,7 @@ export default class ArLocal {
     this.app.context.dbPath = dbPath;
     this.app.context.connection = this.connection;
     this.app.context.fails = this.fails / 100;
+    this.app.context.automine = this.automine;
     // server start date for genesis block timestamp
     this.app.context.timestamp = new Date().getTime();
     this.walletDB = new WalletDB(this.connection);

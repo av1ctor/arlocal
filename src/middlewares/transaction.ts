@@ -17,6 +17,7 @@ import { TransactionDB } from '../db/transaction';
 import { computeRootHash } from '../utils/merkle';
 import { concatBuffers } from '../utils/utils';
 import { verifySignature } from '../utils/key';
+import { mineRoute } from 'routes/mine';
 
 const pathRegex = /^\/?([a-z0-9-_]{43})/i;
 const txIDRegex = /[a-z0-9-_]{43}/i;
@@ -57,6 +58,12 @@ export async function txAccessMiddleware(ctx: Router.RouterContext, next: Next) 
     }*/
 
     await next();
+
+    if(ctx.status === 200) {
+      if(ctx.automine) {
+        mineRoute(Object.assign({}, ctx));
+      }
+    }
   } catch (error) {
     console.error({ error });
   }
