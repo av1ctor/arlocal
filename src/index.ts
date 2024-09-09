@@ -10,7 +10,7 @@ const port = argv._.length && !isNaN(+argv._[0]) ? argv._[0] : 1984;
 const showLogs = argv.hidelogs ? false : true;
 const persist = argv.persist;
 const fails = argv.fails || 0;
-const automine = argv.automine? true: false;
+const automine = argv.automine;
 
 const dbPath = argv.dbpath
   ? argv.dbpath === ':memory:'
