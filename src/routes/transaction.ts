@@ -13,7 +13,6 @@ import { Next } from 'koa';
 import Transaction from 'arweave/node/lib/transaction';
 import { generateTransactionChunks } from '../utils/merkle';
 import { Chunk } from '../faces/chunk';
-import { mineRoute } from '../routes/mine';
 
 export const pathRegex = /^\/?([a-z0-9-_]{43})/i;
 
@@ -309,10 +308,6 @@ export async function txPostRoute(ctx: Router.RouterContext) {
     if (!ctx.txInBundle) {
       const fee = +data.reward > calculatedReward ? +data.reward : calculatedReward;
       await walletDB.decrementBalance(owner, +fee);
-
-      if(ctx.automine) {
-        await mineRoute(Object.assign({}, ctx));
-      }
     }
     ctx.body = data;
     return ctx;
