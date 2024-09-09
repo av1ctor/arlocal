@@ -34,7 +34,7 @@ export async function dataHeadRoute(ctx: Router.RouterContext) {
     return;
   }
 
-  ctx.logging.log(metadata);
+  //ctx.logging.log(metadata);
 
   ctx.status = 200;
   ctx.headers['accept-ranges'] = 'bytes';

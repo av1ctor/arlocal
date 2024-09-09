@@ -10,6 +10,7 @@ const port = argv._.length && !isNaN(+argv._[0]) ? argv._[0] : 1984;
 const showLogs = argv.hidelogs ? false : true;
 const persist = argv.persist;
 const fails = argv.fails || 0;
+const automine = argv.automine? true: false;
 
 const dbPath = argv.dbpath
   ? argv.dbpath === ':memory:'
@@ -20,7 +21,7 @@ const dbPath = argv.dbpath
 let app: ArLocal;
 
 (async () => {
-  app = new ArLocal(+port, showLogs, dbPath, !!persist, fails);
+  app = new ArLocal(+port, showLogs, dbPath, !!persist, fails, automine);
   await app.start();
 
   process.on('SIGINT', stop);

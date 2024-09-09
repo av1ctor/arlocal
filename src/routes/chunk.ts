@@ -2,6 +2,7 @@ import { ChunkDB } from '../db/chunks';
 import { Chunk } from 'faces/chunk';
 import Router from 'koa-router';
 import { b64UrlToBuffer } from '../utils/encoding';
+import { mineRoute } from './mine';
 
 let chunkDB: ChunkDB;
 let oldDbPath: string;
@@ -14,8 +15,12 @@ export async function postChunkRoute(ctx: Router.RouterContext) {
     }
 
     const chunk = ctx.request.body as unknown as Chunk;
+    const finished = +chunk.offset === +chunk.data_size - 1;
+
     const lastOffset = await chunkDB.getLastChunkOffset();
-    if (!lastOffset) chunk.offset = b64UrlToBuffer(chunk.chunk).length;
+    if (!lastOffset) {
+      chunk.offset = b64UrlToBuffer(chunk.chunk).length;
+    }
     else {
       const lastChunk = await chunkDB.getByOffset(lastOffset);
       chunk.offset = lastOffset + b64UrlToBuffer(lastChunk.chunk).length;
@@ -23,9 +28,18 @@ export async function postChunkRoute(ctx: Router.RouterContext) {
 
     await chunkDB.create(chunk);
 
+    // last chunk received? (FIXME: assuming they are received in order!)
+    if(finished) {
+      if(ctx.automine) {
+        await mineRoute(ctx);
+      }
+    }
+
     ctx.body = {};
   } catch (error) {
     console.error({ error });
+    ctx.status = 500;
+    ctx.body = { status: 500, msg: String(error) };
   }
 }
 

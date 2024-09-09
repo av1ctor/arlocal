@@ -32,11 +32,11 @@ export async function mineRoute(ctx: Router.RouterContext) {
       connectionSettings = ctx.connection.client.connectionSettings.filename;
     }
 
-    let txs = await transactionDB.getUnminedTxsRaw();
+    const pendingTxs = await transactionDB.getUnminedTxsRaw();
     const unverifiedBundleTxs: string[] = [];
 
     // unbundle ans-104 bundles that were posted via /chunks
-    for (const tx of txs) {
+    for (const tx of pendingTxs) {
       if (tx.data) continue;
 
       // implementation of unbundling similar to line 153 of routes/transaction.ts
@@ -77,7 +77,7 @@ export async function mineRoute(ctx: Router.RouterContext) {
             const name = Utils.atob(tag.name);
             const value = Utils.atob(tag.value);
 
-            ctx.logging.log(name, value);
+            //ctx.logging.log(name, value);
 
             await ctx.connection
               .insert({
@@ -124,17 +124,14 @@ export async function mineRoute(ctx: Router.RouterContext) {
       }
     }
 
-    const inc = +(ctx.params?.qty || 1);
+    const numBlocks = +(ctx.params?.qty || 1);
 
-    txs = await transactionDB.getUnminedTxs();
-    for (let i = 1; i <= inc; i++) {
-      let $txs = [];
-      if (i === inc) {
-        $txs = txs; // add the transactions to the last block
-      }
-      ctx.network.current = await blockDB.mine(ctx.network.blocks, ctx.network.current, $txs);
-      ctx.network.height = ctx.network.height + 1;
-      ctx.network.blocks = ctx.network.blocks + 1;
+    const txsToMine = await transactionDB.getUnminedTxs();
+    for (let i = 1; i <= numBlocks; i++) {
+      const txs = (i === numBlocks)? txsToMine: [];
+      ctx.network.current = await blockDB.mine(ctx.network.blocks, ctx.network.current, txs);
+      ++ctx.network.height;
+      ++ctx.network.blocks;
     }
 
     await transactionDB.mineTxs(ctx.network.current, unverifiedBundleTxs);

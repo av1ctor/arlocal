@@ -26,7 +26,7 @@ export class BlockDB {
           height,
           mined_at: Date.now(),
           previous_block: previous,
-          txs,
+          txs: JSON.stringify(txs),
           extended: '',
         })
         .into('blocks');
@@ -60,7 +60,7 @@ export class BlockDB {
           height: 0,
           mined_at: Date.now(),
           previous_block: '',
-          txs: [''],
+          txs: JSON.stringify([]),
           extended: '',
         })
         .into('blocks');
